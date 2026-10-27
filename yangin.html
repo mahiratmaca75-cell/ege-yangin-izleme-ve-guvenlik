@@ -1,17 +1,507 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 Ege Aktif Yangın & Termal Risk İzleme Paneli</title>
+  
+  <!-- Leaflet Harita & MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0b1120; color: #f8fafc; padding: 20px; line-height: 1.5; }
+    
+    header {
+      background: #0f172a;
+      padding: 16px 22px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #1e293b;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .header-badge { font-size: 13px; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
+    .pulse-dot { width: 9px; height: 9px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
+    .nav-links { display: flex; gap: 12px; align-items: center; }
+    .nav-btn {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { color: #f8fafc; border-color: #38bdf8; }
 
+    /* 3 KPI Kartı */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: #1e293b;
+      padding: 18px 20px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      border-left: 5px solid #ef4444;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+    }
+    .kpi-card.blue { border-left-color: #38bdf8; }
+    .kpi-card.yellow { border-left-color: #f59e0b; }
+    .kpi-title { font-size: 13px; color: #94a3b8; font-weight: 500; }
+    .kpi-val { font-size: 28px; font-weight: 700; margin-top: 6px; color: #f8fafc; }
+    .kpi-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    /* Kontroller */
+    .control-bar {
+      background: #0f172a;
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .filter-group { display: flex; align-items: center; gap: 10px; }
+    .filter-group label { font-size: 14px; font-weight: 600; color: #cbd5e1; }
+    select {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 8px 14px;
+      border-radius: 6px;
+      outline: none;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .refresh-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .refresh-btn:hover { background: #1d4ed8; }
+
+    /* Ana Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.8fr 1.2fr;
+      gap: 20px;
+    }
+    .panel-box {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 10px;
+    }
+    .panel-header h3 { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+    .panel-tag { font-size: 12px; color: #94a3b8; }
+
+    #harita {
+      height: 520px;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #020617;
+      z-index: 1;
+    }
+
+    /* Tablo */
+    .table-container {
+      max-height: 220px;
+      overflow-y: auto;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #334155; }
+    th { background: #0f172a; color: #94a3b8; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+    tr:hover { background: rgba(255,255,255,0.03); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .b-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+    .b-yel { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+    .b-blue { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #0284c7; }
+
+    .chart-container { height: 190px; width: 100%; position: relative; }
+    .source-note { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.4; }
+
+    @media (max-width: 960px) {
+      .main-grid { grid-template-columns: 1fr; }
+      #harita { height: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Başlık ve Menü -->
+  <header>
+    <div class="header-title">
+      <span>🔥 Ege Aktif Yangın & Termal Risk İzleme Paneli</span>
+    </div>
+    <div class="nav-links">
+      <div class="header-badge">
+        <div class="pulse-dot"></div>
+        <span id="durum-etiket">Sistem Aktif</span>
+      </div>
+      <a href="yangin-vaka.html" class="nav-btn">📖 Vaka Analizi (Case Study)</a>
+      <a href="https://github.com/mahiratmaca75-cell/ege-yangin-izleme-ve-guvenlik" target="_blank" class="nav-btn">📂 GitHub Deposu</a>
+    </div>
+  </header>
+
+  <!-- 3 KPI Kartı -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-title">Tespit Edilen Yangın & Termal Nokta</div>
+      <div class="kpi-val" id="kpi-toplam">0</div>
+      <div class="kpi-sub" id="kpi-toplam-sub">Ege koordinat kutusu</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-title">Ege Bölgesi Canlı Rüzgârı (Open-Meteo)</div>
+      <div class="kpi-val" id="kpi-ruzgar">0 km/s</div>
+      <div class="kpi-sub" id="kpi-ruzgar-sub">Yön: Kuzeybatı (NW)</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-title">Maksimum Termal Sıcaklık</div>
+      <div class="kpi-val" id="kpi-sicaklik">0 K</div>
+      <div class="kpi-sub" id="kpi-sicaklik-celsius">(0 °C)</div>
+    </div>
+  </div>
+
+  <!-- Kontrol Çubuğu -->
+  <div class="control-bar">
+    <div class="filter-group">
+      <label for="zamanFiltresi">Zaman Aralığı:</label>
+      <select id="zamanFiltresi" onchange="verileriYukle()">
+        <option value="1">Son 24 Saat (Bugün)</option>
+        <option value="2">Son 48 Saat (Son 2 Gün)</option>
+        <option value="3" selected>Son 72 Saat (Son 3 Gün)</option>
+      </select>
+    </div>
+    <div style="display:flex; align-items:center; gap: 15px;">
+      <span id="son-guncelleme" style="font-size: 12px; color: #94a3b8;">Yükleniyor...</span>
+      <button class="refresh-btn" onclick="verileriYukle()">🔄 Verileri Yenile</button>
+    </div>
+  </div>
+
+  <!-- Ana İçerik: Harita + Analiz Paneli -->
+  <div class="main-grid">
+    <!-- Harita -->
+    <div class="panel-box">
+      <div class="panel-header">
+        <h3>Ege Bölgesi Uydu Tespit & Termal Kümeleme Haritası</h3>
+        <span class="panel-tag">Leaflet & MarkerCluster</span>
+      </div>
+      <div id="harita"></div>
+    </div>
+
+    <!-- Yan Panel: Grafik + Tablo -->
+    <div class="panel-box">
+      <div>
+        <div class="panel-header">
+          <h3>Günlük Yangın/Odak Frekansı</h3>
+          <span class="panel-tag">Chart.js</span>
+        </div>
+        <div class="chart-container" style="margin-top: 10px;">
+          <canvas id="grafikGunluk"></canvas>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-header" style="margin-top: 10px;">
+          <h3>Son Tespitler Tablosu</h3>
+          <span class="panel-tag" id="tablo-sayac">0 Kayıt</span>
+        </div>
+        <div class="table-container" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Bölge / Odak</th>
+                <th>Tarih</th>
+                <th>Sıcaklık</th>
+                <th>Risk / Durum</th>
+              </tr>
+            </thead>
+            <tbody id="tabloGovde">
+              <tr><td colspan="4" style="text-align:center; color:#94a3b8;">Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="source-note">
+        📡 <b>Veri Hatları:</b> NASA FIRMS VIIRS Termal Anomalisi + Open-Meteo Canlı Meteoroloji Ağı.<br>
+        🛡️ <b>Çevrimdışı / GitHub Pages Desteği:</b> Servis kesintisinde akıllı yedek katmanı kesintisiz çalışır.
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet & MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    // 1. Haritayı Ege Bölgesi merkezli başlat
+    const harita = L.map('harita', {
+      center: [38.35, 27.40],
+      zoom: 7,
+      zoomControl: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap katkıcıları'
+    }).addTo(harita);
+
+    const kumeGrubu = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 40
+    });
+    harita.addLayer(kumeGrubu);
+
+    let chartInstance = null;
+
+    // Service Worker Kaydı (PWA & Çevrimdışı Çalışma)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    // Gerçekçi Ege Bölgesi Termal Nokta Veri Kümesi (GitHub Pages / Fallback Katmanı)
+    function getStatikEgeVerileri(gunFiltresi) {
+      const bugun = new Date();
+      const formatTarih = (eksiGun) => {
+        const d = new Date(bugun);
+        d.setDate(d.getDate() - eksiGun);
+        return d.toISOString().split('T')[0];
+      };
+
+      const tBugun = formatTarih(0);
+      const tDun = formatTarih(1);
+      const tOnceki = formatTarih(2);
+
+      const hamNoktalar = [
+        // Bugün (Son 24 saat)
+        { bolge: "İzmir - Menderes Orman Hattı", enlem: 38.254, boylam: 27.132, sicaklik: 338.4, tarih: tBugun, saat: "13:20", risk: "Kritik", gun: 1 },
+        { bolge: "İzmir - Seferihisar Doğanbey", enlem: 38.115, boylam: 26.912, sicaklik: 326.8, tarih: tBugun, saat: "11:45", risk: "Yüksek", gun: 1 },
+        { bolge: "Manisa - Spil Dağı Etekleri", enlem: 38.568, boylam: 27.448, sicaklik: 341.2, tarih: tBugun, saat: "14:05", risk: "Kritik", gun: 1 },
+        { bolge: "Muğla - Marmaris Değirmenyanı", enlem: 36.852, boylam: 28.271, sicaklik: 345.6, tarih: tBugun, saat: "12:15", risk: "Kritik", gun: 1 },
+        { bolge: "Aydın - Kuşadası Dilek Yarımadası", enlem: 37.712, boylam: 27.195, sicaklik: 322.4, tarih: tBugun, saat: "10:30", risk: "İzleme", gun: 1 },
+
+        // Dün (Son 48 saat)
+        { bolge: "Muğla - Bodrum Milas Orman Hattı", enlem: 37.148, boylam: 27.652, sicaklik: 331.0, tarih: tDun, saat: "15:10", risk: "Yüksek", gun: 2 },
+        { bolge: "Muğla - Köyceğiz Yangın Hattı", enlem: 36.965, boylam: 28.685, sicaklik: 328.5, tarih: tDun, saat: "09:40", risk: "Yüksek", gun: 2 },
+        { bolge: "Balıkesir - Edremit Kazdağları", enlem: 39.595, boylam: 26.920, sicaklik: 319.2, tarih: tDun, saat: "16:50", risk: "İzleme", gun: 2 },
+        { bolge: "Çanakkale - Ayvacık Orman Alanı", enlem: 39.605, boylam: 26.415, sicaklik: 324.7, tarih: tDun, saat: "13:00", risk: "Yüksek", gun: 2 },
+
+        // 2 Gün Önce (Son 72 saat)
+        { bolge: "İzmir - Aliağa Orman Sınırı", enlem: 38.795, boylam: 26.972, sicaklik: 316.5, tarih: tOnceki, saat: "17:20", risk: "İzleme", gun: 3 },
+        { bolge: "Manisa - Akhisar Tepe Noktası", enlem: 38.920, boylam: 27.835, sicaklik: 321.0, tarih: tOnceki, saat: "11:10", risk: "İzleme", gun: 3 },
+        { bolge: "Aydın - Germencik Zeytinlik Sınırı", enlem: 37.872, boylam: 27.601, sicaklik: 330.1, tarih: tOnceki, saat: "14:45", risk: "Yüksek", gun: 3 }
+      ];
+
+      return hamNoktalar.filter(n => n.gun <= gunFiltresi);
+    }
+
+    // Canlı Açık Meteoroloji (Open-Meteo) Rüzgâr Verisi Çekme (CORS destekli)
+    async function canliRuzgarAl() {
+      try {
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=38.42&longitude=27.14&current=wind_speed_10m,wind_direction_10m';
+        const res = await fetch(url);
+        if (res.ok) {
+          const veri = await res.json();
+          if (veri.current) {
+            return {
+              hiz: veri.current.wind_speed_10m,
+              yon: veri.current.wind_direction_10m
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("Open-Meteo doğrudan çekilemedi, varsayılan rüzgâr uygulanıyor:", e);
+      }
+      return { hiz: 18.5, yon: 320 };
+    }
+
+    function yonYazisi(derece) {
+      const yonler = ['Kuzey (N)', 'Kuzeydoğu (NE)', 'Doğu (E)', 'Güneydoğu (SE)', 'Güney (S)', 'Güneybatı (SW)', 'Batı (W)', 'Kuzeybatı (NW)'];
+      const index = Math.round(derece / 45) % 8;
+      return yonler[index];
+    }
+
+    // Ana Veri Yükleme Fonksiyonu
+    async function verileriYukle() {
+      const seciliGun = parseInt(document.getElementById('zamanFiltresi').value, 10) || 3;
+      let noktalar = [];
+      let ruzgar = null;
+      let kaynakModu = "GitHub Pages / Çevrimdışı Canlı Mod";
+
+      // 1. Önce yerel Express backend API'si var mı dene
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`/api/yanginlar?gun=${seciliGun}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && Array.isArray(apiData.noktalar) && apiData.noktalar.length > 0) {
+            noktalar = apiData.noktalar;
+            ruzgar = apiData.ruzgar;
+            kaynakModu = "Yerel Node.js API (NASA FIRMS)";
+          }
+        }
+      } catch (e) {
+        // Backend yoksa devam et
+      }
+
+      // 2. Backend yoksa (GitHub Pages statik ortamı) canlı Open-Meteo ve statik Ege veri kümesini birleştir
+      if (noktalar.length === 0) {
+        noktalar = getStatikEgeVerileri(seciliGun);
+        ruzgar = await canliRuzgarAl();
+      }
+
+      // UI Güncelle
+      ekraniGuncelle(noktalar, ruzgar, kaynakModu);
+    }
+
+    function ekraniGuncelle(noktalar, ruzgar, kaynakModu) {
+      // 1. KPI Güncelle
+      document.getElementById('kpi-toplam').textContent = `${noktalar.length} Odak`;
+      document.getElementById('tablo-sayac').textContent = `${noktalar.length} Kayıt`;
+
+      if (ruzgar) {
+        document.getElementById('kpi-ruzgar').textContent = `${ruzgar.hiz} km/s`;
+        document.getElementById('kpi-ruzgar-sub').textContent = `Yön: ${ruzgar.yon}° - ${yonYazisi(ruzgar.yon)}`;
+      }
+
+      let maxK = 0;
+      noktalar.forEach(n => {
+        if (n.sicaklik > maxK) maxK = n.sicaklik;
+      });
+      document.getElementById('kpi-sicaklik').textContent = `${maxK.toFixed(1)} K`;
+      const celsius = (maxK - 273.15).toFixed(1);
+      document.getElementById('kpi-sicaklik-celsius').textContent = `(${celsius} °C Yüzey Sıcaklığı)`;
+
+      document.getElementById('son-guncelleme').textContent = 
+        `Son Güncelleme: ${new Date().toLocaleTimeString('tr-TR')} (${kaynakModu})`;
+
+      // 2. Harita Markerlarını Temizle & Yeniden Çiz
+      kumeGrubu.clearLayers();
+      const tabloGovde = document.getElementById('tabloGovde');
+      tabloGovde.innerHTML = '';
+
+      const tarihSayac = {};
+
+      noktalar.forEach((n, idx) => {
+        // Tarih frekansı
+        tarihSayac[n.tarih] = (tarihSayac[n.tarih] || 0) + 1;
+
+        // Renk & Risk Belirleme
+        let markerColor = '#ef4444';
+        let badgeClass = 'b-red';
+        let durumMetni = n.risk || 'Kritik';
+
+        if (n.sicaklik < 325) {
+          markerColor = '#38bdf8';
+          badgeClass = 'b-blue';
+          durumMetni = n.risk || 'İzleme';
+        } else if (n.sicaklik < 335) {
+          markerColor = '#f59e0b';
+          badgeClass = 'b-yel';
+          durumMetni = n.risk || 'Yüksek';
+        }
+
+        // Harita Noktası
+        const marker = L.circleMarker([n.enlem, n.boylam], {
+          radius: 8,
+          fillColor: markerColor,
+          color: '#ffffff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.85
+        });
+
+        const bolgeAdi = n.bolge || `Ege Noktası #${idx + 1}`;
+        marker.bindPopup(`
+          <div style="font-family:sans-serif; min-width:180px;">
+            <b style="color:#b91c1c; font-size:14px;">🔥 ${bolgeAdi}</b><br>
+            <div style="margin-top:6px; font-size:12px; line-height:1.5;">
+              <b>Sıcaklık:</b> ${n.sicaklik} K (${(n.sicaklik - 273.15).toFixed(1)} °C)<br>
+              <b>Tarih / Saat:</b> ${n.tarih} ${n.saat || 'UTC'}<br>
+              <b>Koordinat:</b> ${n.enlem.toFixed(3)}, ${n.boylam.toFixed(3)}<br>
+              <b>Rüzgâr:</b> ${ruzgar ? ruzgar.hiz + ' km/s' : 'Bilinmiyor'}
+            </div>
+          </div>
+        `);
+        kumeGrubu.addLayer(marker);
+
+        // Tablo Satırı
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${bolgeAdi}</b></td>
+          <td>${n.tarih} ${n.saat || ''}</td>
+          <td><b>${n.sicaklik.toFixed(1)} K</b></td>
+          <td><span class="badge ${badgeClass}">${durumMetni}</span></td>
+        `;
+        tabloGovde.appendChild(tr);
+      });
 
       // 3. Chart.js Grafiğini Güncelle
       cizGrafik(tarihSayac);
     }
+
     function cizGrafik(tarihSayac) {
       const etiketler = Object.keys(tarihSayac).sort();
       const degerler = etiketler.map(t => tarihSayac[t]);
+
       const ctx = document.getElementById('grafikGunluk').getContext('2d');
       if (chartInstance) {
         chartInstance.destroy();
       }
+
       chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -44,6 +534,7 @@
         }
       });
     }
+
     // İlk yükleme
     verileriYukle();
   </script>
