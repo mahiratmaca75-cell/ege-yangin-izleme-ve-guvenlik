@@ -1,0 +1,43 @@
+============================================================
+npm EKOSİSTEMİ KRİTİK ALTYAPI ANALİZİ (SOSYAL AĞ ANALİZİ)
+============================================================
+
+           Paket Adı  Ters Bağımlılık (In-Degree)  Dış Bağımlılık (Out-Degree)  PageRank Skoru  K-Core Derecesi
+               chalk                            3                            2          0.0606                1
+        loose-envify                            1                            0          0.0578                1
+         ansi-styles                            1                            0          0.0482                1
+      supports-color                            1                            0          0.0482                1
+                 ajv                            1                            3          0.0456                1
+               debug                            3                            0          0.0424                2
+               react                            2                            1          0.0415                1
+     fast-deep-equal                            1                            0          0.0354                1
+              uri-js                            1                            0          0.0354                1
+json-schema-traverse                            1                            0          0.0354                1
+                  qs                            2                            0          0.0329                2
+           scheduler                            1                            0          0.0320                1
+               bytes                            1                            0          0.0297                1
+      proxy-from-env                            1                            0          0.0288                1
+    follow-redirects                            1                            0          0.0288                1
+           form-data                            1                            0          0.0288                1
+        schema-utils                            1                            1          0.0272                1
+           neo-async                            1                            0          0.0272                1
+    enhanced-resolve                            1                            0          0.0272                1
+             tapable                            1                            0          0.0272                1
+             accepts                            1                            0          0.0256                1
+         escape-html                            1                            0          0.0256                1
+         body-parser                            1                            3          0.0256                2
+              cookie                            1                            0          0.0256                1
+             express                            0                            6          0.0224                2
+               axios                            0                            3          0.0224                1
+           react-dom                            0                            2          0.0224                1
+             webpack                            0                            4          0.0224                1
+              lodash                            0                            1          0.0224                1
+               mocha                            0                            2          0.0224                1
+                jest                            0                            2          0.0224                1
+
+============================================================
+YORUM & BULGULAR:
+- 'chalk', 'debug', 'react' ve 'qs' gibi temel paketler en yüksek PageRank ve Ters Bağımlılık değerine sahiptir.
+- Bu paketlerde yaşanacak tek bir güvenlik zafiyeti veya kesinti, bağımlı yüzlerce üst düzey paketi doğrudan etkileyecektir (Kritik Altyapı Riski).
+- K-Core çekirdeği yüksek olan paketler, ekosistemin merkezindeki en sıkı bağlı bileşenleri temsil eder.
+============================================================

@@ -1,0 +1,15 @@
+{
+  "name": "Ege Aktif Yangın Noktaları",
+  "short_name": "EgeYangın",
+  "start_url": "/yangin.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/785/785116.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
