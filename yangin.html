@@ -98,7 +98,7 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <script>
-    let harita = L.map('harita').setView([38.4, 27.5], 7); // Ege Bölgesi merkezli
+    let harita = L.map('harita').setView([38.4, 27.5], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '© OpenStreetMap katkıcıları'
@@ -109,60 +109,72 @@
 
     let chartInstance = null;
 
+    // Yedek / Demo Veriler (GitHub Pages gibi statik ortamlarda çalışması için)
+    const statikDemoVeri = {
+      sonGuncelleme: "Bugün 11:20",
+      ruzgar: { hiz: 24, yon: 310 },
+      noktalar: [
+        { tarih: "2026-10-26", saat: "14:30", enlem: 38.32, boylam: 27.15, sicaklik: 338.4 },
+        { tarih: "2026-10-26", saat: "12:15", enlem: 38.65, boylam: 27.42, sicaklik: 345.1 },
+        { tarih: "2026-10-25", saat: "15:40", enlem: 37.06, boylam: 28.32, sicaklik: 362.8 },
+        { tarih: "2026-10-25", saat: "11:20", enlem: 37.85, boylam: 27.84, sicaklik: 329.5 },
+        { tarih: "2026-10-24", saat: "13:05", enlem: 38.92, boylam: 26.85, sicaklik: 331.2 },
+        { tarih: "2026-10-24", saat: "16:50", enlem: 36.85, boylam: 28.27, sicaklik: 354.0 }
+      ]
+    };
+
+    function verileriEkranaBas(data) {
+      document.getElementById('son-guncelleme').textContent = 'Son Güncelleme: ' + data.sonGuncelleme;
+      document.getElementById('kpi-toplam').textContent = data.noktalar.length;
+      document.getElementById('kpi-ruzgar').textContent = `${data.ruzgar.hiz} km/s (${data.ruzgar.yon}°)`;
+
+      let maxK = 0;
+      kumeGrubu.clearLayers();
+      const tabloGovde = document.getElementById('tabloGovde');
+      tabloGovde.innerHTML = '';
+
+      const tarihSayac = {};
+
+      data.noktalar.forEach(n => {
+        if (n.sicaklik > maxK) maxK = n.sicaklik;
+        tarihSayac[n.tarih] = (tarihSayac[n.tarih] || 0) + 1;
+
+        const marker = L.circleMarker([n.enlem, n.boylam], {
+          radius: 8,
+          fillColor: '#ef4444',
+          color: '#991b1b',
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.85
+        });
+
+        marker.bindPopup(`
+          <b>🔥 Yangın / Termal Nokta</b><br>
+          <b>Tarih:</b> ${n.tarih} ${n.saat} UTC<br>
+          <b>Sıcaklık:</b> ${n.sicaklik} K<br>
+          <b>Rüzgâr:</b> ${data.ruzgar.hiz} km/s (${data.ruzgar.yon}°)
+        `);
+        kumeGrubu.addLayer(marker);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${n.tarih}</td><td>${n.enlem.toFixed(2)}</td><td>${n.boylam.toFixed(2)}</td><td>${n.sicaklik} K</td>`;
+        tabloGovde.appendChild(tr);
+      });
+
+      document.getElementById('kpi-sicaklik').textContent = maxK ? `${maxK} K` : '0 K';
+      cizGrafik(tarihSayac);
+    }
+
     async function verileriYukle() {
       const gun = document.getElementById('zamanFiltresi').value;
       try {
         const res = await fetch(`/api/yanginlar?gun=${gun}`);
+        if (!res.ok) throw new Error("API sunucusu bulunamadı");
         const data = await res.json();
-
-        document.getElementById('son-guncelleme').textContent = 'Son Güncelleme: ' + data.sonGuncelleme;
-        document.getElementById('kpi-toplam').textContent = data.noktalar.length;
-        document.getElementById('kpi-ruzgar').textContent = `${data.ruzgar.hiz} km/s (${data.ruzgar.yon}°)`;
-
-        let maxK = 0;
-        kumeGrubu.clearLayers();
-        const tabloGovde = document.getElementById('tabloGovde');
-        tabloGovde.innerHTML = '';
-
-        const tarihSayac = {};
-
-        data.noktalar.forEach(n => {
-          if (n.sicaklik > maxK) maxK = n.sicaklik;
-
-          // Tarih gruplaması (grafik için)
-          tarihSayac[n.tarih] = (tarihSayac[n.tarih] || 0) + 1;
-
-          // Haritaya marker ekleme
-          const marker = L.circleMarker([n.enlem, n.boylam], {
-            radius: 7,
-            fillColor: '#ef4444',
-            color: '#991b1b',
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-          });
-
-          marker.bindPopup(`
-            <b>🔥 Yangın / Termal Nokta</b><br>
-            <b>Tarih:</b> ${n.tarih} ${n.saat} UTC<br>
-            <b>Sıcaklık:</b> ${n.sicaklik} K<br>
-            <b>Rüzgâr:</b> ${data.ruzgar.hiz} km/s (${data.ruzgar.yon}°)
-          `);
-          kumeGrubu.addLayer(marker);
-
-          // Tablo satırı
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${n.tarih}</td><td>${n.enlem.toFixed(2)}</td><td>${n.boylam.toFixed(2)}</td><td>${n.sicaklik} K</td>`;
-          tabloGovde.appendChild(tr);
-        });
-
-        document.getElementById('kpi-sicaklik').textContent = maxK ? `${maxK} K` : '0 K';
-
-        // Grafiği Çiz
-        cizGrafik(tarihSayac);
-
+        verileriEkranaBas(data);
       } catch (err) {
-        console.error("Yükleme hatası:", err);
+        console.warn("API çevrimdışı, yedek demo veriler yükleniyor...");
+        verileriEkranaBas(statikDemoVeri);
       }
     }
 
