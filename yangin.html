@@ -1,78 +1,51 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ege Aktif Yangın & Termal Risk İzleme Paneli</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0b1120; color: #f8fafc; padding: 20px; }
-    header { background: #0f172a; padding: 16px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1e293b; margin-bottom: 20px; }
-    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .kpi-card { background: #1e293b; padding: 18px; border-radius: 8px; border-left: 4px solid #ef4444; }
-    .kpi-card.blue { border-left-color: #38bdf8; }
-    .kpi-card.yellow { border-left-color: #f59e0b; }
-    .kpi-title { font-size: 13px; color: #94a3b8; }
-    .kpi-val { font-size: 26px; font-weight: bold; margin-top: 5px; }
-    .main-grid { display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 20px; }
-    .box { background: #1e293b; padding: 18px; border-radius: 8px; border: 1px solid #334155; }
-    #radar { width: 100%; height: 460px; background: #020617; border-radius: 6px; position: relative; border: 1px solid #1e293b; background-image: radial-gradient(#1e293b 1.5px, transparent 1.5px); background-size: 24px 24px; }
-    .spot { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 8px currentColor; }
-    .label { font-size: 11px; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    th, td { border-bottom: 1px solid #334155; padding: 8px 6px; text-align: left; }
-    th { color: #94a3b8; background: #0f172a; }
-    .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-    .b-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
-    .b-yel { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
-    .bar-line { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
-    .bar-bg { background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 5px; }
-    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
-  </style>
-</head>
-<body>
 
-  <header>
-    <div style="font-size: 18px; font-weight: bold;">🔥 Ege Aktif Yangın & Termal Risk İzleme Paneli</div>
-    <div style="font-size: 13px; color: #38bdf8;">● Canlı Sistem Aktif</div>
-  </header>
 
-  <div class="kpi-row">
-    <div class="kpi-card">
-      <div class="kpi-title">İzlenen Kritik Ege İstasyonları</div>
-      <div class="kpi-val" id="kpi-toplam">7 İstasyon</div>
-    </div>
-    <div class="kpi-card blue">
-      <div class="kpi-title">Bölge Ortalama Rüzgârı</div>
-      <div class="kpi-val" id="kpi-ruzgar">22.8 km/s</div>
-    </div>
-    <div class="kpi-card yellow">
-      <div class="kpi-title">Maksimum Termal Yüzey Sıcaklığı</div>
-      <div class="kpi-val" id="kpi-sicaklik">298.6 K</div>
-    </div>
-  </div>
 
-  <div class="main-grid">
-    <div class="box">
-      <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
-        <h3 style="font-size: 15px;">Ege Bölgesi Termal Odak Radar Haritası</h3>
-        <span style="font-size: 12px; color: #94a3b8;">Canlı Konum Katmanı</span>
-      </div>
-      <div id="radar">
-        <div class="spot" style="left: 28%; top: 15%;">
-          <div class="dot" style="color: #ef4444; background: #ef4444;"></div>
-          <div class="label">Çanakkale (293.0K)</div>
-        </div>
-        <div class="spot" style="left: 48%; top: 22%;">
-          <div class="dot" style="color: #f59e0b; background: #f59e0b;"></div>
-          <div class="label">Balıkesir (293.7K)</div>
-        </div>
-        <div class="spot" style="left: 55%; top: 42%;">
-          <div class="dot" style="color: #ef4444; background: #ef4444;"></div>
-          <div class="label">Manisa (296.4K)</div>
-        </div>
-        <div class="spot" style="left: 35%; top: 48%;">
-          <div class="dot" style="color: #f59e0b; background: #f59e0b;"></div>
-          <div class="label">İzmir (
+
+      // 3. Chart.js Grafiğini Güncelle
+      cizGrafik(tarihSayac);
+    }
+    function cizGrafik(tarihSayac) {
+      const etiketler = Object.keys(tarihSayac).sort();
+      const degerler = etiketler.map(t => tarihSayac[t]);
+      const ctx = document.getElementById('grafikGunluk').getContext('2d');
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: etiketler.length ? etiketler : ['Kayıt Yok'],
+          datasets: [{
+            label: 'Tespit Sayısı',
+            data: degerler.length ? degerler : [0],
+            backgroundColor: '#ef4444',
+            borderRadius: 6,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#94a3b8', stepSize: 1 },
+              grid: { color: '#334155' }
+            },
+            x: {
+              ticks: { color: '#94a3b8' },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+    // İlk yükleme
+    verileriYukle();
+  </script>
+</body>
+</html>
