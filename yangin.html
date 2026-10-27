@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ege Aktif Yangın Noktaları</title>
+  <title>Ege Aktif Yangın & Termal Risk İzleme Paneli</title>
   
   <!-- Leaflet Harita Kütüphanesi -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -22,74 +22,74 @@
     .kpi-deger { font-size: 22px; font-weight: bold; margin-top: 5px; color: #0f172a; }
     .kontrol-paneli { display: flex; gap: 15px; align-items: center; padding: 0 20px 15px 20px; flex-wrap: wrap; }
     select, button { padding: 8px 14px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 500; cursor: pointer; }
+    button { background: #0284c7; color: white; border: none; }
+    button:hover { background: #0369a1; }
     .icerik { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; padding: 0 20px 20px 20px; }
-    #harita { height: 500px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    #harita { height: 520px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .yan-panel { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    th, td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 7px 8px; text-align: left; }
     th { background: #f1f5f9; }
     .uyari { font-size: 12px; color: #64748b; margin-top: 8px; }
+    .durum-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .risk-yuksek { background: #fee2e2; color: #b91c1c; }
+    .risk-orta { background: #fef3c7; color: #b45309; }
     @media (max-width: 900px) { .icerik { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 
   <header>
-    <div style="font-size: 18px; font-weight: bold;">🔥 Ege Aktif Yangın İzleme Paneli</div>
-    <div id="son-guncelleme" style="font-size: 13px; color: #94a3b8;">Yükleniyor...</div>
+    <div style="font-size: 18px; font-weight: bold;">🔥 Ege Aktif Yangın & Termal Risk İzleme Paneli</div>
+    <div id="son-guncelleme" style="font-size: 13px; color: #94a3b8;">Canlı veriler yükleniyor...</div>
   </header>
 
   <!-- 3 KPI Kartı -->
   <div class="kpi-container">
     <div class="kpi-kart">
-      <div style="font-size: 13px; color: #64748b;">Tespit Edilen Yangın/Termal Nokta</div>
-      <div class="kpi-deger" id="kpi-toplam">0</div>
+      <div style="font-size: 13px; color: #64748b;">İzlenen Aktif Odak / İstasyon</div>
+      <div class="kpi-deger" id="kpi-toplam">Yükleniyor...</div>
     </div>
     <div class="kpi-kart" style="border-left-color: #3b82f6;">
-      <div style="font-size: 13px; color: #64748b;">Ege Rüzgâr Hızı & Yönü</div>
-      <div class="kpi-deger" id="kpi-ruzgar">0 km/s - 0°</div>
+      <div style="font-size: 13px; color: #64748b;">Ege Bölge Ort. Rüzgârı</div>
+      <div class="kpi-deger" id="kpi-ruzgar">0 km/s</div>
     </div>
     <div class="kpi-kart" style="border-left-color: #f59e0b;">
-      <div style="font-size: 13px; color: #64748b;">Maksimum Sıcaklık (Kelvin)</div>
+      <div style="font-size: 13px; color: #64748b;">Maksimum Yüzey Sıcaklığı (Kelvin)</div>
       <div class="kpi-deger" id="kpi-sicaklik">0 K</div>
     </div>
   </div>
 
-  <!-- Filtreler -->
+  <!-- Kontroller -->
   <div class="kontrol-paneli">
-    <label><b>Zaman Aralığı:</b></label>
-    <select id="zamanFiltresi" onchange="verileriYukle()">
-      <option value="1">Son 24 Saat</option>
-      <option value="2">Son 48 Saat</option>
-      <option value="3" selected>Son 72 Saat</option>
-    </select>
-    <button onclick="verileriYukle()">🔄 Verileri Yenile</button>
+    <button onclick="canliVerileriYukle()">🔄 Anlık Canlı Verileri Güncelle</button>
+    <span id="durum-mesaj" style="font-size: 13px; color: #16a34a; font-weight: 500;"></span>
   </div>
 
-  <!-- Ana İçerik: Harita ve Grafikler -->
+  <!-- Harita ve Tablolar -->
   <div class="icerik">
     <div id="harita"></div>
 
     <div class="yan-panel">
       <div>
-        <h4 style="margin: 0 0 10px 0;">Günlük Tespit Sayısı</h4>
-        <canvas id="grafikGunluk" style="max-height: 200px;"></canvas>
+        <h4 style="margin: 0 0 10px 0;">Bölgesel Yangın Risk Dağılımı</h4>
+        <canvas id="grafikGunluk" style="max-height: 190px;"></canvas>
       </div>
 
       <div>
-        <h4 style="margin: 10px 0 5px 0;">Son Tespitler Tablosu</h4>
-        <div style="max-height: 180px; overflow-y: auto;">
+        <h4 style="margin: 10px 0 5px 0;">Aktif İstasyon & Yangın Odakları</h4>
+        <div style="max-height: 200px; overflow-y: auto;">
           <table>
             <thead>
-              <tr><th>Tarih</th><th>Enlem</th><th>Boylam</th><th>Parlaklık</th></tr>
+              <tr><th>Bölge</th><th>Sıcaklık</th><th>Rüzgâr</th><th>Durum</th></tr>
             </thead>
             <tbody id="tabloGovde">
-              <tr><td colspan="4">Yükleniyor...</td></tr>
+              <tr><td colspan="4">İstasyonlardan anlık veri alınıyor...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
-      <div class="uyari">Veri Kaynağı: NASA FIRMS (VIIRS) + Open-Meteo. Bilgilendirme amaçlıdır.</div>
+      <div class="uyari">Canlı API Kaynağı: Open-Meteo Canlı Meteoroloji & Yüzey Ağı. İstemci taraflı anlık işlenmektedir.</div>
     </div>
   </div>
 
@@ -98,10 +98,11 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <script>
-    let harita = L.map('harita').setView([38.4, 27.5], 7);
+    // Ege Bölgesi merkezli harita başlatma
+    let harita = L.map('harita').setView([38.45, 27.60], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
-      attribution: '© OpenStreetMap katkıcıları'
+      attribution: '© OpenStreetMap'
     }).addTo(harita);
 
     let kumeGrubu = L.markerClusterGroup();
@@ -109,100 +110,16 @@
 
     let chartInstance = null;
 
-    // Yedek / Demo Veriler (GitHub Pages gibi statik ortamlarda çalışması için)
-    const statikDemoVeri = {
-      sonGuncelleme: "Bugün 11:20",
-      ruzgar: { hiz: 24, yon: 310 },
-      noktalar: [
-        { tarih: "2026-10-26", saat: "14:30", enlem: 38.32, boylam: 27.15, sicaklik: 338.4 },
-        { tarih: "2026-10-26", saat: "12:15", enlem: 38.65, boylam: 27.42, sicaklik: 345.1 },
-        { tarih: "2026-10-25", saat: "15:40", enlem: 37.06, boylam: 28.32, sicaklik: 362.8 },
-        { tarih: "2026-10-25", saat: "11:20", enlem: 37.85, boylam: 27.84, sicaklik: 329.5 },
-        { tarih: "2026-10-24", saat: "13:05", enlem: 38.92, boylam: 26.85, sicaklik: 331.2 },
-        { tarih: "2026-10-24", saat: "16:50", enlem: 36.85, boylam: 28.27, sicaklik: 354.0 }
-      ]
-    };
+    // Ege Bölgesi'ndeki yangın riski taşıyan kilit odak/orman istasyonları
+    const istasyonlar = [
+      { ad: "İzmir - Menderes / Seferihisar", enlem: 38.25, boylam: 27.13 },
+      { ad: "Manisa - Spil Dağı / Kırkağaç", enlem: 38.56, boylam: 27.45 },
+      { ad: "Muğla - Marmaris / Köyceğiz", enlem: 36.85, boylam: 28.27 },
+      { ad: "Muğla - Bodrum Orman Hattı", enlem: 37.04, boylam: 27.43 },
+      { ad: "Aydın - Kuşadası / Dilek Yarımadası", enlem: 37.86, boylam: 27.26 },
+      { ad: "Çanakkale - Kazdağları / Ayvacık", enlem: 39.60, boylam: 26.40 },
+      { ad: "Balıkesir - Edremit Körfez Hattı", enlem: 39.59, boylam: 26.92 }
+    ];
 
-    function verileriEkranaBas(data) {
-      document.getElementById('son-guncelleme').textContent = 'Son Güncelleme: ' + data.sonGuncelleme;
-      document.getElementById('kpi-toplam').textContent = data.noktalar.length;
-      document.getElementById('kpi-ruzgar').textContent = `${data.ruzgar.hiz} km/s (${data.ruzgar.yon}°)`;
-
-      let maxK = 0;
-      kumeGrubu.clearLayers();
-      const tabloGovde = document.getElementById('tabloGovde');
-      tabloGovde.innerHTML = '';
-
-      const tarihSayac = {};
-
-      data.noktalar.forEach(n => {
-        if (n.sicaklik > maxK) maxK = n.sicaklik;
-        tarihSayac[n.tarih] = (tarihSayac[n.tarih] || 0) + 1;
-
-        const marker = L.circleMarker([n.enlem, n.boylam], {
-          radius: 8,
-          fillColor: '#ef4444',
-          color: '#991b1b',
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.85
-        });
-
-        marker.bindPopup(`
-          <b>🔥 Yangın / Termal Nokta</b><br>
-          <b>Tarih:</b> ${n.tarih} ${n.saat} UTC<br>
-          <b>Sıcaklık:</b> ${n.sicaklik} K<br>
-          <b>Rüzgâr:</b> ${data.ruzgar.hiz} km/s (${data.ruzgar.yon}°)
-        `);
-        kumeGrubu.addLayer(marker);
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${n.tarih}</td><td>${n.enlem.toFixed(2)}</td><td>${n.boylam.toFixed(2)}</td><td>${n.sicaklik} K</td>`;
-        tabloGovde.appendChild(tr);
-      });
-
-      document.getElementById('kpi-sicaklik').textContent = maxK ? `${maxK} K` : '0 K';
-      cizGrafik(tarihSayac);
-    }
-
-    async function verileriYukle() {
-      const gun = document.getElementById('zamanFiltresi').value;
-      try {
-        const res = await fetch(`/api/yanginlar?gun=${gun}`);
-        if (!res.ok) throw new Error("API sunucusu bulunamadı");
-        const data = await res.json();
-        verileriEkranaBas(data);
-      } catch (err) {
-        console.warn("API çevrimdışı, yedek demo veriler yükleniyor...");
-        verileriEkranaBas(statikDemoVeri);
-      }
-    }
-
-    function cizGrafik(tarihSayac) {
-      const etiketler = Object.keys(tarihSayac);
-      const degerler = Object.values(tarihSayac);
-
-      const ctx = document.getElementById('grafikGunluk').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
-
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: etiketler.length ? etiketler : ['Veri Yok'],
-          datasets: [{
-            label: 'Tespit Sayısı',
-            data: degerler.length ? degerler : [0],
-            backgroundColor: '#f87171'
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } }
-        }
-      });
-    }
-
-    verileriYukle();
-  </script>
-</body>
-</html>
+    async function canliVerileriYukle() {
+      const
